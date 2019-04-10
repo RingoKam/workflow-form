@@ -5,6 +5,8 @@ import {
   FormControl,
   Validators
 } from "@angular/forms";
+import { merge, Observable, combineLatest } from 'rxjs';
+import { map, tap } from "rxjs/operators"
 
 @Component({
   selector: "form-builder",
@@ -33,7 +35,7 @@ export class FormBuilderComponent implements OnInit {
   @Output() onSubmit = new EventEmitter();
   form: FormGroup;
 
-  constructor(private formBuilder: FormBuilder) {}
+  constructor(private formBuilder: FormBuilder) { }
 
   ngOnInit() {
     this.formFields = [
@@ -45,6 +47,7 @@ export class FormBuilderComponent implements OnInit {
         required: true
       },
       {
+        displayIf: { fieldName: "firstName", condition:"input === 'ringo'"},
         type: "text",
         name: "lastName",
         label: "Last Name",
@@ -95,6 +98,19 @@ export class FormBuilderComponent implements OnInit {
     this.form = this.formBuilder.group(
       this.formatJsonInputToForm(this.formFields)
     );
+
+    //Get the field that needs to be monitored
+    const delta$: Observable<any>[] = this.formFields
+    .filter(form => form.displayIf !== undefined)
+    .map(form => {
+      return this.form.get(form.displayIf.fieldName).valueChanges.pipe(tap(console.log),map(input => eval(form.displayIf.condition)));
+    })
+
+    merge(...delta$).subscribe((r) => {console.log("verify",r);})
+
+    // this.form.valueChanges.subscribe(v => {
+    //   console.log(v);
+    // })
   }
 
   formatJsonInputToForm(fieldsJson: any[]) {
